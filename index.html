@@ -1,218 +1,139 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<title>Clicker Minecraft</title>
 <style>
+  body {
+    margin: 0;
+    font-family: 'Press Start 2P', cursive;
+    background: #87CEEB;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #fff;
+  }
 
-body{
-  margin:0;
-  background:#2c3e50;
-  color:white;
-  font-family:Arial;
-  text-align:center;
-}
+  h1 {
+    margin-top: 20px;
+    text-align: center;
+    color: #fff;
+    text-shadow: 2px 2px 0 #000;
+  }
 
-#top{
-  padding:10px;
-  font-size:20px;
-}
+  #block {
+    width: 150px;
+    height: 150px;
+    margin-top: 50px;
+    background: url('https://i.imgur.com/dYcYQ7E.png') no-repeat center/cover;
+    cursor: pointer;
+    image-rendering: pixelated;
+    border: 4px solid #000;
+    box-shadow: 4px 4px 0 #555;
+    transition: transform 0.1s;
+  }
 
-canvas{
-  background:#3cb043;
-  width:100%;
-  height:55vh;
-}
+  #block:active {
+    transform: scale(0.9);
+  }
 
-#cards{
-  position:fixed;
-  bottom:0;
-  width:100%;
-  background:#111;
-  padding:10px;
-}
+  #stats {
+    margin-top: 30px;
+    text-align: center;
+  }
 
-button{
-  font-size:18px;
-  padding:10px;
-  margin:5px;
-  border:none;
-  border-radius:10px;
-}
+  .stat {
+    font-size: 16px;
+    margin: 5px 0;
+  }
 
+  #upgrades {
+    margin-top: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    width: 90%;
+  }
+
+  .upgrade-btn {
+    background: #8B4513;
+    color: #fff;
+    border: 2px solid #000;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 12px;
+    cursor: pointer;
+    flex: 1 0 140px;
+    text-align: center;
+    image-rendering: pixelated;
+  }
+
+  .upgrade-btn:hover {
+    background: #A0522D;
+  }
 </style>
-
 </head>
-
 <body>
 
-<div id="top">
-  Elixir: <span id="elixir">5</span>
+<h1>⛏️ Clicker Minecraft ⛏️</h1>
+
+<div id="block"></div>
+
+<div id="stats">
+  <div class="stat">Minérios: <span id="resources">0</span></div>
+  <div class="stat">Por clique: <span id="rpc">1</span></div>
+  <div class="stat">Automático por segundo: <span id="rps">0</span></div>
 </div>
 
-<canvas id="game"></canvas>
-
-<div id="cards">
-  <button onclick="spawn('cat')">🐱 3</button>
-  <button onclick="spawn('knight')">🗡 4</button>
-  <button onclick="spawn('tank')">🐻 5</button>
+<div id="upgrades">
+  <button class="upgrade-btn" data-cost="20" data-rpc="1">Upgrade Clique +1 (20)</button>
+  <button class="upgrade-btn" data-cost="50" data-rps="1">Gerador Automático +1/s (50)</button>
 </div>
 
 <script>
+let resources = 0;
+let rpc = 1; // Resources per click
+let rps = 0; // Resources per second
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const resourcesEl = document.getElementById('resources');
+const rpcEl = document.getElementById('rpc');
+const rpsEl = document.getElementById('rps');
+const block = document.getElementById('block');
 
-canvas.width = window.innerWidth;
-canvas.height = 350;
+// Clicar no bloco
+block.addEventListener('click', () => {
+  resources += rpc;
+  resourcesEl.textContent = resources;
+  block.style.transform = 'scale(0.95)';
+  setTimeout(() => block.style.transform = 'scale(1)', 100);
+});
 
-let elixir = 5;
+// Upgrades
+document.querySelectorAll('.upgrade-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const cost = parseInt(btn.dataset.cost);
+    if(resources >= cost){
+      resources -= cost;
+      if(btn.dataset.rpc) rpc += parseInt(btn.dataset.rpc);
+      if(btn.dataset.rps) rps += parseInt(btn.dataset.rps);
+      resourcesEl.textContent = resources;
+      rpcEl.textContent = rpc;
+      rpsEl.textContent = rps;
 
-let troops = [];
-let enemies = [];
-
-let towers = [
-  {x:50,y:140,hp:300},
-  {x:50,y:260,hp:300},
-  {x:120,y:200,hp:500}
-];
-
-let enemyTowers = [
-  {x:canvas.width-50,y:140,hp:300},
-  {x:canvas.width-50,y:260,hp:300},
-  {x:canvas.width-120,y:200,hp:500}
-];
-
-/* Elixir regen */
-setInterval(()=>{
-  if(elixir < 10) elixir++;
-  document.getElementById("elixir").innerText = elixir;
-},1000);
-
-/* Spawn tropas */
-function spawn(type){
-  let yPositions = [140, 200, 260];
-  let y = yPositions[Math.floor(Math.random() * yPositions.length)];
-
-  if(type==="cat" && elixir>=3){
-    troops.push({x:150,y:y,hp:30,atk:0.4,speed:1,target:null});
-    elixir-=3;
-  }
-
-  if(type==="knight" && elixir>=4){
-    troops.push({x:150,y:y,hp:60,atk:0.3,speed:0.8,target:null});
-    elixir-=4;
-  }
-
-  if(type==="tank" && elixir>=5){
-    troops.push({x:150,y:y,hp:120,atk:0.2,speed:0.5,target:null});
-    elixir-=5;
-  }
-}
-
-/* Spawn inimigos */
-setInterval(()=>{
-  let yPositions = [140, 200, 260];
-  let y = yPositions[Math.floor(Math.random() * yPositions.length)];
-  enemies.push({x:canvas.width-150,y:y,hp:40,atk:0.3,speed:-0.8,target:null});
-},4000);
-
-/* Update */
-function update(){
-
-  // Tropas atacando torres inimigas
-  troops.forEach(t=>{
-    // Se já tem alvo, não move
-    if(!t.target){
-      // Procura torre inimiga próxima
-      for(let tower of enemyTowers){
-        if(Math.abs(t.x - tower.x) < 30 && t.y === tower.y){
-          t.target = tower;
-        }
-      }
-    }
-    if(t.target){
-      t.target.hp -= t.atk;
-    } else {
-      t.x += t.speed;
+      // Aumenta custo progressivamente
+      btn.dataset.cost = Math.floor(cost * 1.5);
+      btn.textContent = btn.textContent.replace(/\(\d+\)/, `(${btn.dataset.cost})`);
     }
   });
+});
 
-  // Inimigos atacando torres amigas
-  enemies.forEach(e=>{
-    if(!e.target){
-      for(let tower of towers){
-        if(Math.abs(e.x - tower.x) < 30 && e.y === tower.y){
-          e.target = tower;
-        }
-      }
-    }
-    if(e.target){
-      e.target.hp -= e.atk;
-    } else {
-      e.x += e.speed;
-    }
-  });
-
-  // Tropas atacando inimigos
-  troops.forEach(t=>{
-    enemies.forEach(e=>{
-      if(Math.abs(t.x - e.x) < 20 && t.y === e.y){
-        e.hp -= t.atk;
-        t.hp -= e.atk;
-      }
-    });
-  });
-
-  // Remover mortos
-  troops = troops.filter(t => t.hp > 0);
-  enemies = enemies.filter(e => e.hp > 0);
-  towers = towers.filter(t => t.hp > 0);
-  enemyTowers = enemyTowers.filter(t => t.hp > 0);
-}
-
-/* Draw */
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  /* Linha arena */
-  ctx.fillStyle="#95a5a6";
-  ctx.fillRect(canvas.width/2-5,0,10,canvas.height);
-
-  /* Torres */
-  ctx.fillStyle="blue";
-  towers.forEach(t=>{
-    ctx.fillRect(t.x,t.y,40,40);
-  });
-
-  ctx.fillStyle="red";
-  enemyTowers.forEach(t=>{
-    ctx.fillRect(t.x-40,t.y,40,40);
-  });
-
-  /* Tropas */
-  ctx.fillStyle="orange";
-  troops.forEach(t=>{
-    ctx.fillRect(t.x,t.y,20,20);
-  });
-
-  /* Inimigos */
-  ctx.fillStyle="black";
-  enemies.forEach(e=>{
-    ctx.fillRect(e.x,e.y,20,20);
-  });
-}
-
-/* Loop */
-function loop(){
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-loop();
-
+// Geração automática
+setInterval(() => {
+  resources += rps;
+  resourcesEl.textContent = resources;
+}, 1000);
 </script>
 
 </body>
