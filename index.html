@@ -8,26 +8,37 @@
 
 body{
 margin:0;
-background:#222;
+background:#2c3e50;
 color:white;
 font-family:Arial;
 text-align:center;
 }
 
-#ui{
+#top{
 padding:10px;
+font-size:20px;
 }
 
 canvas{
 background:#3cb043;
 width:100%;
-height:60vh;
+height:55vh;
+}
+
+#cards{
+position:fixed;
+bottom:0;
+width:100%;
+background:#111;
+padding:10px;
 }
 
 button{
-font-size:20px;
+font-size:18px;
 padding:10px;
 margin:5px;
+border:none;
+border-radius:10px;
 }
 
 </style>
@@ -36,75 +47,114 @@ margin:5px;
 
 <body>
 
-<div id="ui">
-Energia: <span id="energy">5</span>
+<div id="top">
+Elixir: <span id="elixir">5</span>
 </div>
 
 <canvas id="game"></canvas>
 
-<div>
-<button onclick="spawn('cat')">🐱 Gato</button>
-<button onclick="spawn('tank')">🐻 Tanque</button>
+<div id="cards">
+<button onclick="spawn('cat')">🐱 3</button>
+<button onclick="spawn('knight')">🗡 4</button>
+<button onclick="spawn('tank')">🐻 5</button>
 </div>
 
 <script>
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = 400;
+canvas.width=window.innerWidth;
+canvas.height=350;
 
-let energy=5;
+let elixir=5;
 
-let cats=[];
+let troops=[];
 let enemies=[];
 
-let towerHP=100;
-let enemyTowerHP=100;
+let towers=[
+{x:50,y:140,hp:300},
+{x:50,y:260,hp:300},
+{x:120,y:200,hp:500}
+];
+
+let enemyTowers=[
+{x:canvas.width-50,y:140,hp:300},
+{x:canvas.width-50,y:260,hp:300},
+{x:canvas.width-120,y:200,hp:500}
+];
+
+/* elixir regen */
 
 setInterval(()=>{
-if(energy<10) energy++;
-document.getElementById("energy").innerText=energy;
+
+if(elixir<10) elixir++;
+
+document.getElementById("elixir").innerText=elixir;
+
 },1000);
+
+/* spawn tropas */
 
 function spawn(type){
 
-if(type==="cat" && energy>=3){
+if(type==="cat" && elixir>=3){
 
-cats.push({x:50,y:200,hp:20,atk:0.2,speed:1});
+troops.push({x:150,y:200,hp:30,atk:0.4,speed:1});
 
-energy-=3;
-
-}
-
-if(type==="tank" && energy>=5){
-
-cats.push({x:50,y:200,hp:60,atk:0.1,speed:0.5});
-
-energy-=5;
+elixir-=3;
 
 }
 
+if(type==="knight" && elixir>=4){
+
+troops.push({x:150,y:200,hp:60,atk:0.3,speed:0.8});
+
+elixir-=4;
+
 }
+
+if(type==="tank" && elixir>=5){
+
+troops.push({x:150,y:200,hp:120,atk:0.2,speed:0.5});
+
+elixir-=5;
+
+}
+
+}
+
+/* inimigo */
 
 setInterval(()=>{
 
-enemies.push({x:canvas.width-50,y:200,hp:30,atk:0.2,speed:-0.8});
+enemies.push({
+x:canvas.width-150,
+y:200,
+hp:40,
+atk:0.3,
+speed:-0.8
+});
 
-},3000);
+},4000);
+
+/* update */
 
 function update(){
 
-cats.forEach(c=>{
+troops.forEach(t=>{
 
-c.x+=c.speed;
+t.x+=t.speed;
 
-if(c.x>canvas.width-120){
+enemyTowers.forEach(tower=>{
 
-enemyTowerHP-=c.atk;
+if(Math.abs(t.x-tower.x)<30){
+
+tower.hp-=t.atk;
 
 }
+
+});
 
 });
 
@@ -112,60 +162,75 @@ enemies.forEach(e=>{
 
 e.x+=e.speed;
 
-if(e.x<120){
+towers.forEach(tower=>{
 
-towerHP-=e.atk;
+if(Math.abs(e.x-tower.x)<30){
+
+tower.hp-=e.atk;
 
 }
 
 });
 
+});
+
 }
+
+/* draw */
 
 function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
+/* linha arena */
+
+ctx.fillStyle="#95a5a6";
+ctx.fillRect(canvas.width/2-5,0,10,canvas.height);
+
 /* torres */
 
 ctx.fillStyle="blue";
-ctx.fillRect(20,150,80,100);
+
+towers.forEach(t=>{
+ctx.fillRect(t.x,t.y,40,40);
+});
 
 ctx.fillStyle="red";
-ctx.fillRect(canvas.width-100,150,80,100);
 
-/* gatos */
+enemyTowers.forEach(t=>{
+ctx.fillRect(t.x-40,t.y,40,40);
+});
+
+/* tropas */
 
 ctx.fillStyle="orange";
-cats.forEach(c=>{
-ctx.fillRect(c.x,c.y,20,20);
+
+troops.forEach(t=>{
+ctx.fillRect(t.x,t.y,20,20);
 });
 
 /* inimigos */
 
 ctx.fillStyle="black";
+
 enemies.forEach(e=>{
 ctx.fillRect(e.x,e.y,20,20);
 });
 
-/* HP */
-
-ctx.fillStyle="white";
-ctx.fillText("HP "+towerHP,20,140);
-ctx.fillText("HP "+enemyTowerHP,canvas.width-120,140);
-
 }
 
-function gameLoop(){
+/* loop */
+
+function loop(){
 
 update();
 draw();
 
-requestAnimationFrame(gameLoop);
+requestAnimationFrame(loop);
 
 }
 
-gameLoop();
+loop();
 
 </script>
 
