@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>3D Shooter</title>
+<title>3D Shooter Mobile</title>
 
 <style>
 
@@ -10,6 +10,7 @@ body{
 margin:0;
 overflow:hidden;
 background:black;
+font-family:Arial;
 }
 
 #crosshair{
@@ -21,76 +22,126 @@ color:white;
 transform:translate(-50%,-50%);
 }
 
-#score{
+#ui{
 position:absolute;
 top:10px;
 left:10px;
 color:white;
-font-family:Arial;
 font-size:20px;
 }
 
-</style>
+#joystick{
+position:absolute;
+bottom:40px;
+left:40px;
+width:120px;
+height:120px;
+border:2px solid white;
+border-radius:50%;
+}
 
+#stick{
+position:absolute;
+width:40px;
+height:40px;
+background:white;
+border-radius:50%;
+left:40px;
+top:40px;
+}
+
+#shootBtn{
+position:absolute;
+bottom:50px;
+right:50px;
+width:80px;
+height:80px;
+background:red;
+border-radius:50%;
+font-size:20px;
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+</style>
 </head>
 
 <body>
 
 <div id="crosshair">+</div>
-<div id="score">Score: 0</div>
+
+<div id="ui">
+Score: <span id="score">0</span><br>
+Vida: <span id="health">100</span>
+</div>
+
+<div id="joystick">
+<div id="stick"></div>
+</div>
+
+<div id="shootBtn">FIRE</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
 
-let score = 0
-
 let scene = new THREE.Scene()
 
 let camera = new THREE.PerspectiveCamera(
 75,
-window.innerWidth / window.innerHeight,
+window.innerWidth/window.innerHeight,
 0.1,
 1000
 )
 
 let renderer = new THREE.WebGLRenderer()
 
-renderer.setSize(window.innerWidth, window.innerHeight)
+renderer.setSize(window.innerWidth,window.innerHeight)
 
 document.body.appendChild(renderer.domElement)
 
-camera.position.z = 5
+camera.position.y=1
+camera.position.z=5
 
 // luz
 let light = new THREE.DirectionalLight(0xffffff,1)
-light.position.set(5,10,7)
+light.position.set(5,10,5)
 scene.add(light)
 
 // chão
-let floorGeometry = new THREE.PlaneGeometry(100,100)
-let floorMaterial = new THREE.MeshStandardMaterial({color:0x333333})
+let floorGeo = new THREE.PlaneGeometry(200,200)
+let floorMat = new THREE.MeshStandardMaterial({color:0x333333})
+let floor = new THREE.Mesh(floorGeo,floorMat)
 
-let floor = new THREE.Mesh(floorGeometry,floorMaterial)
-
-floor.rotation.x = -Math.PI/2
-floor.position.y = -2
+floor.rotation.x=-Math.PI/2
 
 scene.add(floor)
 
+// jogador
+let player = {
+x:0,
+z:5,
+speed:0.1
+}
+
+// UI
+let score=0
+let health=100
+
 // inimigos
-let enemies = []
+let enemies=[]
 
 function createEnemy(){
 
-let geometry = new THREE.BoxGeometry()
-let material = new THREE.MeshStandardMaterial({color:0xff0000})
+let geo = new THREE.BoxGeometry(1,1,1)
+let mat = new THREE.MeshStandardMaterial({color:0xff0000})
 
-let enemy = new THREE.Mesh(geometry,material)
+let enemy = new THREE.Mesh(geo,mat)
 
-enemy.position.x = (Math.random()*10)-5
-enemy.position.y = 0
-enemy.position.z = -20
+enemy.position.x=(Math.random()*20)-10
+enemy.position.z=-50
 
 scene.add(enemy)
 
@@ -101,39 +152,97 @@ enemies.push(enemy)
 setInterval(createEnemy,2000)
 
 // tiro
-window.addEventListener("click",shoot)
-
 function shoot(){
 
-let raycaster = new THREE.Raycaster()
+let raycaster=new THREE.Raycaster()
 
 raycaster.setFromCamera({x:0,y:0},camera)
 
-let hits = raycaster.intersectObjects(enemies)
+let hits=raycaster.intersectObjects(enemies)
 
 if(hits.length>0){
 
-let enemy = hits[0].object
+let enemy=hits[0].object
 
+// explosão
+enemy.material.color.set(0xffff00)
+
+setTimeout(()=>{
 scene.remove(enemy)
+},100)
 
 enemies.splice(enemies.indexOf(enemy),1)
 
 score++
 
-document.getElementById("score").innerHTML="Score: "+score
+document.getElementById("score").innerText=score
 
 }
 
 }
+
+document.getElementById("shootBtn").addEventListener("touchstart",shoot)
+window.addEventListener("click",shoot)
+
+// joystick
+let joystick=document.getElementById("joystick")
+let stick=document.getElementById("stick")
+
+let moveX=0
+let moveY=0
+
+joystick.addEventListener("touchmove",(e)=>{
+
+let rect=joystick.getBoundingClientRect()
+
+let x=e.touches[0].clientX-rect.left-60
+let y=e.touches[0].clientY-rect.top-60
+
+moveX=x/40
+moveY=y/40
+
+stick.style.left=(40+x)+"px"
+stick.style.top=(40+y)+"px"
+
+})
+
+joystick.addEventListener("touchend",()=>{
+
+moveX=0
+moveY=0
+
+stick.style.left="40px"
+stick.style.top="40px"
+
+})
 
 // animação
 function animate(){
 
 requestAnimationFrame(animate)
 
+// mover jogador
+player.x+=moveX*player.speed
+player.z+=moveY*player.speed
+
+camera.position.x=player.x
+camera.position.z=player.z
+
+// mover inimigos
 enemies.forEach(enemy=>{
-enemy.position.z += 0.1
+
+enemy.position.z+=0.2
+
+if(enemy.position.z>player.z){
+
+health-=10
+
+document.getElementById("health").innerText=health
+
+scene.remove(enemy)
+
+}
+
 })
 
 renderer.render(scene,camera)
