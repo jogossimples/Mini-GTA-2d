@@ -3,59 +3,61 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini GTA Mobile</title>
+<title>GTA Mobile Avançado</title>
 
 <style>
 
 body{
 margin:0;
+overflow:hidden;
 background:#111;
 color:white;
 font-family:Arial;
-text-align:center;
 }
 
 canvas{
-background:#222;
 display:block;
-margin:auto;
+background:#222;
 }
 
 #ui{
-padding:8px;
+position:fixed;
+top:10px;
+left:10px;
 font-size:18px;
 }
 
-.controls{
+#shoot{
 position:fixed;
-bottom:20px;
-width:100%;
-display:flex;
-justify-content:space-between;
-padding:20px;
-box-sizing:border-box;
-}
-
-.move{
-display:grid;
-grid-template-columns:60px 60px 60px;
-grid-template-rows:60px 60px 60px;
-gap:5px;
-}
-
-button{
-font-size:20px;
+bottom:40px;
+right:40px;
+width:80px;
+height:80px;
+border-radius:50%;
 border:none;
-border-radius:10px;
-background:#444;
+background:red;
+font-size:28px;
 color:white;
 }
 
-.shoot{
-width:80px;
-height:80px;
-background:red;
-font-size:24px;
+#joystick{
+position:fixed;
+bottom:30px;
+left:30px;
+width:120px;
+height:120px;
+background:rgba(255,255,255,0.1);
+border-radius:50%;
+}
+
+#stick{
+position:absolute;
+width:60px;
+height:60px;
+background:#aaa;
+border-radius:50%;
+left:30px;
+top:30px;
 }
 
 </style>
@@ -63,30 +65,15 @@ font-size:24px;
 
 <body>
 
-<h3>🚗 Mini GTA Mobile</h3>
 <div id="ui">Vida: 100 | Pontos: 0</div>
 
 <canvas id="game"></canvas>
 
-<div class="controls">
-
-<div class="move">
-<div></div>
-<button onclick="move('up')">⬆️</button>
-<div></div>
-
-<button onclick="move('left')">⬅️</button>
-<div></div>
-<button onclick="move('right')">➡️</button>
-
-<div></div>
-<button onclick="move('down')">⬇️</button>
-<div></div>
+<div id="joystick">
+<div id="stick"></div>
 </div>
 
-<button class="shoot" onclick="shoot()">🔫</button>
-
-</div>
+<button id="shoot">🔫</button>
 
 <script>
 
@@ -94,86 +81,83 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 canvas.width = window.innerWidth;
-canvas.height = window.innerHeight * 0.6;
+canvas.height = window.innerHeight;
+
+const worldWidth = 2000;
+const worldHeight = 2000;
 
 let bullets = [];
 let enemies = [];
 let score = 0;
 
-const player = {
-x:canvas.width/2,
-y:canvas.height/2,
-size:25,
-speed:20,
+const player={
+x:1000,
+y:1000,
+size:30,
+speed:4,
 health:100
 };
 
-function move(dir){
-
-if(dir==="up") player.y -= player.speed;
-if(dir==="down") player.y += player.speed;
-if(dir==="left") player.x -= player.speed;
-if(dir==="right") player.x += player.speed;
-
-}
-
-function shoot(){
-
-bullets.push({
-x:player.x,
-y:player.y,
-dy:-10,
-size:6
-});
-
-}
+let camX=0;
+let camY=0;
 
 function spawnEnemy(){
 
-let x = Math.random()*canvas.width;
-let y = 0;
-
 enemies.push({
-x:x,
-y:y,
-size:25,
-speed:2
+x:Math.random()*worldWidth,
+y:Math.random()*worldHeight,
+size:30,
+speed:1.2
 });
 
 }
 
 setInterval(spawnEnemy,2000);
 
+document.getElementById("shoot").onclick=()=>{
+
+bullets.push({
+x:player.x,
+y:player.y,
+dx:0,
+dy:-8,
+size:6
+});
+
+};
+
 function update(){
 
 bullets.forEach(b=>{
-b.y += b.dy;
+b.y+=b.dy;
 });
 
 enemies.forEach((e,ei)=>{
 
-let dx = player.x - e.x;
-let dy = player.y - e.y;
-let dist = Math.sqrt(dx*dx + dy*dy);
+let dx=player.x-e.x;
+let dy=player.y-e.y;
+let dist=Math.sqrt(dx*dx+dy*dy);
 
-e.x += dx/dist * e.speed;
-e.y += dy/dist * e.speed;
+e.x+=dx/dist*e.speed;
+e.y+=dy/dist*e.speed;
 
-if(dist < player.size){
-player.health -= 1;
+if(dist<player.size){
+player.health-=0.3;
 }
 
 bullets.forEach((b,bi)=>{
 
 if(
-b.x < e.x+e.size &&
-b.x+b.size > e.x &&
-b.y < e.y+e.size &&
-b.y+b.size > e.y
+b.x<e.x+e.size &&
+b.x+b.size>e.x &&
+b.y<e.y+e.size &&
+b.y+b.size>e.y
 ){
+
 enemies.splice(ei,1);
 bullets.splice(bi,1);
 score+=10;
+
 }
 
 });
@@ -181,12 +165,17 @@ score+=10;
 });
 
 if(player.health<=0){
+
 alert("💀 Game Over | Pontos: "+score);
 location.reload();
+
 }
 
+camX = player.x - canvas.width/2;
+camY = player.y - canvas.height/2;
+
 document.getElementById("ui").innerText =
-"Vida: "+player.health+" | Pontos: "+score;
+"Vida: "+Math.floor(player.health)+" | Pontos: "+score;
 
 }
 
@@ -194,17 +183,25 @@ function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
+ctx.fillStyle="#333";
+
+for(let x=0;x<worldWidth;x+=100){
+for(let y=0;y<worldHeight;y+=100){
+ctx.strokeRect(x-camX,y-camY,100,100);
+}
+}
+
 ctx.fillStyle="lime";
-ctx.fillRect(player.x,player.y,player.size,player.size);
+ctx.fillRect(player.x-camX,player.y-camY,player.size,player.size);
 
 ctx.fillStyle="yellow";
 bullets.forEach(b=>{
-ctx.fillRect(b.x,b.y,b.size,b.size);
+ctx.fillRect(b.x-camX,b.y-camY,b.size,b.size);
 });
 
 ctx.fillStyle="red";
 enemies.forEach(e=>{
-ctx.fillRect(e.x,e.y,e.size,e.size);
+ctx.fillRect(e.x-camX,e.y-camY,e.size,e.size);
 });
 
 }
@@ -218,6 +215,49 @@ requestAnimationFrame(gameLoop);
 }
 
 gameLoop();
+
+
+/* JOYSTICK */
+
+const joystick=document.getElementById("joystick");
+const stick=document.getElementById("stick");
+
+let dragging=false;
+
+joystick.addEventListener("touchstart",()=>dragging=true);
+
+document.addEventListener("touchend",()=>{
+dragging=false;
+stick.style.left="30px";
+stick.style.top="30px";
+});
+
+document.addEventListener("touchmove",(e)=>{
+
+if(!dragging)return;
+
+let touch=e.touches[0];
+
+let rect=joystick.getBoundingClientRect();
+
+let x=touch.clientX-rect.left-60;
+let y=touch.clientY-rect.top-60;
+
+let dist=Math.sqrt(x*x+y*y);
+let max=40;
+
+if(dist>max){
+x=x/dist*max;
+y=y/dist*max;
+}
+
+stick.style.left=(x+30)+"px";
+stick.style.top=(y+30)+"px";
+
+player.x+=x*0.1*player.speed;
+player.y+=y*0.1*player.speed;
+
+});
 
 </script>
 
