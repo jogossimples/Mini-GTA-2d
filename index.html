@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clicker Minecraft</title>
+<title>Clicker Minecraft Avançado</title>
 <style>
   body {
     margin: 0;
@@ -18,7 +18,6 @@
   h1 {
     margin-top: 20px;
     text-align: center;
-    color: #fff;
     text-shadow: 2px 2px 0 #000;
   }
 
@@ -26,7 +25,6 @@
     width: 150px;
     height: 150px;
     margin-top: 50px;
-    background: url('https://i.imgur.com/dYcYQ7E.png') no-repeat center/cover;
     cursor: pointer;
     image-rendering: pixelated;
     border: 4px solid #000;
@@ -77,9 +75,9 @@
 </head>
 <body>
 
-<h1>⛏️ Clicker Minecraft ⛏️</h1>
+<h1>⛏️ Clicker Minecraft Avançado ⛏️</h1>
 
-<div id="block"></div>
+<img id="block" src="https://i.imgur.com/4P0UkkC.png" alt="Bloco">
 
 <div id="stats">
   <div class="stat">Minérios: <span id="resources">0</span></div>
@@ -92,22 +90,48 @@
   <button class="upgrade-btn" data-cost="50" data-rps="1">Gerador Automático +1/s (50)</button>
 </div>
 
+<audio id="mine-sound" src="https://freesound.org/data/previews/341/341695_3248244-lq.mp3"></audio>
+
 <script>
 let resources = 0;
-let rpc = 1; // Resources per click
-let rps = 0; // Resources per second
+let rpc = 1;
+let rps = 0;
+
+// Blocos
+const blocks = [
+  {name:'Madeira', src:'https://i.imgur.com/4P0UkkC.png', value:1},
+  {name:'Pedra', src:'https://i.imgur.com/dYcYQ7E.png', value:3},
+  {name:'Diamante', src:'https://i.imgur.com/q3bXrWa.png', value:10}
+];
+let currentBlock = 0;
 
 const resourcesEl = document.getElementById('resources');
 const rpcEl = document.getElementById('rpc');
 const rpsEl = document.getElementById('rps');
-const block = document.getElementById('block');
+const blockEl = document.getElementById('block');
+const mineSound = document.getElementById('mine-sound');
 
 // Clicar no bloco
-block.addEventListener('click', () => {
-  resources += rpc;
+blockEl.addEventListener('click', () => {
+  resources += rpc * blocks[currentBlock].value;
   resourcesEl.textContent = resources;
-  block.style.transform = 'scale(0.95)';
-  setTimeout(() => block.style.transform = 'scale(1)', 100);
+
+  blockEl.style.transform = 'scale(0.95)';
+  setTimeout(() => blockEl.style.transform = 'scale(1)', 100);
+
+  mineSound.currentTime = 0;
+  mineSound.play();
+});
+
+// Trocar bloco a cada 20 cliques
+let clickCounter = 0;
+blockEl.addEventListener('click', () => {
+  clickCounter++;
+  if(clickCounter >= 20){
+    clickCounter = 0;
+    currentBlock = (currentBlock + 1) % blocks.length;
+    blockEl.src = blocks[currentBlock].src;
+  }
 });
 
 // Upgrades
@@ -134,6 +158,7 @@ setInterval(() => {
   resources += rps;
   resourcesEl.textContent = resources;
 }, 1000);
+
 </script>
 
 </body>
