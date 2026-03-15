@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Zombie Shooter 3D</title>
+<title>Zombie Survival 3D</title>
 
 <style>
 
@@ -19,13 +19,21 @@ top:50%;
 left:50%;
 transform:translate(-50%,-50%);
 color:white;
-font-size:28px;
+font-size:30px;
 }
 
 #ui{
 position:absolute;
 top:10px;
 left:10px;
+color:white;
+font-size:18px;
+}
+
+#weapon{
+position:absolute;
+top:10px;
+right:10px;
 color:white;
 font-size:18px;
 }
@@ -58,10 +66,10 @@ width:90px;
 height:90px;
 background:red;
 border-radius:50%;
-color:white;
 display:flex;
 align-items:center;
 justify-content:center;
+color:white;
 font-size:20px;
 }
 
@@ -77,16 +85,18 @@ Score: <span id="score">0</span><br>
 Vida: <span id="health">100</span>
 </div>
 
-<div id="joystick">
-<div id="stick"></div>
+<div id="weapon">
+Arma: <span id="weaponName">Pistola</span>
 </div>
 
+<div id="joystick"><div id="stick"></div></div>
 <div id="shootBtn">FIRE</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
 
+// cena
 let scene = new THREE.Scene()
 
 let camera = new THREE.PerspectiveCamera(
@@ -97,18 +107,16 @@ window.innerWidth/window.innerHeight,
 )
 
 let renderer = new THREE.WebGLRenderer()
-
 renderer.setSize(window.innerWidth,window.innerHeight)
-
 document.body.appendChild(renderer.domElement)
 
-camera.position.y=1.6
-camera.position.z=5
+camera.position.y = 1.6
+camera.position.z = 5
 
 // luz
-let light = new THREE.DirectionalLight(0xffffff,1)
-light.position.set(10,20,10)
-scene.add(light)
+let sun = new THREE.DirectionalLight(0xffffff,1)
+sun.position.set(10,20,10)
+scene.add(sun)
 
 scene.add(new THREE.AmbientLight(0xaaaaaa))
 
@@ -117,43 +125,37 @@ let floorGeo = new THREE.PlaneGeometry(500,500)
 let floorMat = new THREE.MeshStandardMaterial({color:0x222222})
 let floor = new THREE.Mesh(floorGeo,floorMat)
 
-floor.rotation.x=-Math.PI/2
+floor.rotation.x = -Math.PI/2
 scene.add(floor)
 
 // prédios
-function createBuilding(x,z){
+function building(x,z){
 
-let geo = new THREE.BoxGeometry(
-5,
-Math.random()*20+10,
-5
-)
+let geo = new THREE.BoxGeometry(6,Math.random()*20+10,6)
+let mat = new THREE.MeshStandardMaterial({color:0x444444})
 
-let mat = new THREE.MeshStandardMaterial({color:0x555555})
+let mesh = new THREE.Mesh(geo,mat)
 
-let b = new THREE.Mesh(geo,mat)
+mesh.position.x = x
+mesh.position.z = z
+mesh.position.y = geo.parameters.height/2
 
-b.position.x=x
-b.position.z=z
-b.position.y=geo.parameters.height/2
-
-scene.add(b)
+scene.add(mesh)
 
 }
 
-for(let i=0;i<40;i++){
+for(let i=0;i<60;i++){
 
-createBuilding(
-(Math.random()*200)-100,
-(Math.random()*200)-100
+building(
+(Math.random()*300)-150,
+(Math.random()*300)-150
 )
 
 }
 
-// arma simples
+// arma
 let gunGeo = new THREE.BoxGeometry(0.3,0.2,1)
 let gunMat = new THREE.MeshStandardMaterial({color:0x333333})
-
 let gun = new THREE.Mesh(gunGeo,gunMat)
 
 gun.position.set(0.5,-0.4,-1)
@@ -162,57 +164,114 @@ camera.add(gun)
 scene.add(camera)
 
 // jogador
-let player = {x:0,z:5,speed:0.15}
+let player = {
+x:0,
+z:5,
+speed:0.15
+}
 
 // UI
-let score=0
-let health=100
+let score = 0
+let health = 100
 
-// inimigos
+// armas
+let weapons = [
+{name:"Pistola",damage:1,fireRate:400},
+{name:"Rifle",damage:2,fireRate:150},
+{name:"Shotgun",damage:4,fireRate:700}
+]
+
+let currentWeapon = 0
+
+document.getElementById("weaponName").innerText =
+weapons[currentWeapon].name
+
+// troca arma
+window.addEventListener("keydown",e=>{
+
+if(e.key==="1"){currentWeapon=0}
+if(e.key==="2"){currentWeapon=1}
+if(e.key==="3"){currentWeapon=2}
+
+document.getElementById("weaponName").innerText =
+weapons[currentWeapon].name
+
+})
+
+// zumbis
 let enemies=[]
 
-function createZombie(){
+function spawnZombie(){
 
 let geo = new THREE.BoxGeometry(1,2,1)
 let mat = new THREE.MeshStandardMaterial({color:0x00aa00})
 
-let zombie = new THREE.Mesh(geo,mat)
+let z = new THREE.Mesh(geo,mat)
 
-zombie.position.x=(Math.random()*80)-40
-zombie.position.z=(Math.random()*80)-40
-zombie.position.y=1
+z.position.x=(Math.random()*120)-60
+z.position.z=(Math.random()*120)-60
+z.position.y=1
 
-scene.add(zombie)
+z.health=5
 
-enemies.push(zombie)
+scene.add(z)
+
+enemies.push(z)
 
 }
 
-setInterval(createZombie,2000)
+setInterval(spawnZombie,2000)
+
+// loot
+let loots=[]
+
+function spawnLoot(){
+
+let geo = new THREE.BoxGeometry(1,1,1)
+let mat = new THREE.MeshStandardMaterial({color:0xffff00})
+
+let box = new THREE.Mesh(geo,mat)
+
+box.position.x=(Math.random()*80)-40
+box.position.z=(Math.random()*80)-40
+box.position.y=0.5
+
+scene.add(box)
+
+loots.push(box)
+
+}
+
+setInterval(spawnLoot,8000)
 
 // tiro
 function shoot(){
 
-let raycaster=new THREE.Raycaster()
+let raycaster = new THREE.Raycaster()
 
 raycaster.setFromCamera({x:0,y:0},camera)
 
-let hits=raycaster.intersectObjects(enemies)
+let hits = raycaster.intersectObjects(enemies)
 
 if(hits.length>0){
 
-let enemy=hits[0].object
+let enemy = hits[0].object
+
+enemy.health -= weapons[currentWeapon].damage
 
 enemy.material.color.set(0xffff00)
 
-setTimeout(()=>{
+if(enemy.health<=0){
+
 scene.remove(enemy)
-},100)
 
 enemies.splice(enemies.indexOf(enemy),1)
 
 score++
+
 document.getElementById("score").innerText=score
+
+}
 
 }
 
@@ -253,17 +312,24 @@ stick.style.top="40px"
 
 })
 
+// dia e noite
+let time = 0
+
 // animação
 function animate(){
 
 requestAnimationFrame(animate)
 
-// mover jogador
-player.x+=moveX*player.speed
-player.z+=moveY*player.speed
+time += 0.001
 
-camera.position.x=player.x
-camera.position.z=player.z
+sun.intensity = Math.sin(time)+1
+
+// mover jogador
+player.x += moveX * player.speed
+player.z += moveY * player.speed
+
+camera.position.x = player.x
+camera.position.z = player.z
 
 // IA zumbi
 enemies.forEach(enemy=>{
@@ -271,15 +337,35 @@ enemies.forEach(enemy=>{
 let dx = player.x - enemy.position.x
 let dz = player.z - enemy.position.z
 
-let dist = Math.sqrt(dx*dx+dz*dz)
+let dist = Math.sqrt(dx*dx + dz*dz)
 
-enemy.position.x += dx/dist*0.03
-enemy.position.z += dz/dist*0.03
+enemy.position.x += dx/dist*0.04
+enemy.position.z += dz/dist*0.04
 
 if(dist<1.5){
 
-health-=0.2
-document.getElementById("health").innerText=Math.floor(health)
+health -= 0.1
+
+document.getElementById("health").innerText =
+Math.floor(health)
+
+}
+
+})
+
+// loot coleta
+loots.forEach(box=>{
+
+let dx = player.x - box.position.x
+let dz = player.z - box.position.z
+
+let dist = Math.sqrt(dx*dx+dz*dz)
+
+if(dist<2){
+
+health += 10
+
+scene.remove(box)
 
 }
 
