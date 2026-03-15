@@ -3,50 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GTA Mobile Avançado</title>
+<title>Kitty Castle 3D Mobile</title>
 
 <style>
-
 body{
 margin:0;
 overflow:hidden;
-background:#111;
-color:white;
 font-family:Arial;
-}
-
-canvas{
-display:block;
-background:#222;
+background:black;
 }
 
 #ui{
 position:fixed;
 top:10px;
 left:10px;
-font-size:18px;
+color:white;
+font-size:20px;
+z-index:2;
 }
 
-#shoot{
+#jump{
 position:fixed;
+right:30px;
 bottom:40px;
-right:40px;
 width:80px;
 height:80px;
 border-radius:50%;
 border:none;
-background:red;
-font-size:28px;
-color:white;
+background:orange;
+font-size:30px;
 }
 
 #joystick{
 position:fixed;
-bottom:30px;
 left:30px;
+bottom:40px;
 width:120px;
 height:120px;
-background:rgba(255,255,255,0.1);
+background:rgba(255,255,255,0.15);
 border-radius:50%;
 }
 
@@ -54,168 +48,193 @@ border-radius:50%;
 position:absolute;
 width:60px;
 height:60px;
-background:#aaa;
-border-radius:50%;
 left:30px;
 top:30px;
+background:white;
+border-radius:50%;
 }
-
 </style>
 </head>
 
 <body>
 
-<div id="ui">Vida: 100 | Pontos: 0</div>
-
-<canvas id="game"></canvas>
+<div id="ui">Moedas: 0</div>
 
 <div id="joystick">
 <div id="stick"></div>
 </div>
 
-<button id="shoot">🔫</button>
+<button id="jump">⭐</button>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 
 <script>
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const scene = new THREE.Scene();
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const camera = new THREE.PerspectiveCamera(
+75,
+window.innerWidth/window.innerHeight,
+0.1,
+1000
+);
 
-const worldWidth = 2000;
-const worldHeight = 2000;
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-let bullets = [];
-let enemies = [];
-let score = 0;
+/* LUZ */
 
-const player={
-x:1000,
-y:1000,
-size:30,
-speed:4,
-health:100
-};
+const light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(5,10,5);
+scene.add(light);
 
-let camX=0;
-let camY=0;
+/* CHÃO */
 
-function spawnEnemy(){
+const groundGeo = new THREE.BoxGeometry(100,1,100);
+const groundMat = new THREE.MeshStandardMaterial({color:0x228822});
+const ground = new THREE.Mesh(groundGeo,groundMat);
+ground.position.y=-0.5;
+scene.add(ground);
 
-enemies.push({
-x:Math.random()*worldWidth,
-y:Math.random()*worldHeight,
-size:30,
-speed:1.2
-});
+/* CASTELO */
+
+function tower(x,z){
+
+let geo = new THREE.CylinderGeometry(2,2,8,16);
+let mat = new THREE.MeshStandardMaterial({color:0x999999});
+let mesh = new THREE.Mesh(geo,mat);
+
+mesh.position.set(x,4,z);
+
+scene.add(mesh);
 
 }
 
-setInterval(spawnEnemy,2000);
+tower(-15,-15);
+tower(15,-15);
+tower(-15,15);
+tower(15,15);
 
-document.getElementById("shoot").onclick=()=>{
+/* GATINHO (player) */
 
-bullets.push({
-x:player.x,
-y:player.y,
-dx:0,
-dy:-8,
-size:6
-});
+const playerGeo = new THREE.BoxGeometry(1,1,1);
+const playerMat = new THREE.MeshStandardMaterial({color:0xffaa00});
+const player = new THREE.Mesh(playerGeo,playerMat);
 
-};
+player.position.y=0.5;
+
+scene.add(player);
+
+/* MOEDAS */
+
+let coins=[];
+let score=0;
+
+function spawnCoin(){
+
+let geo=new THREE.CylinderGeometry(0.4,0.4,0.1,16);
+let mat=new THREE.MeshStandardMaterial({color:0xffff00});
+let coin=new THREE.Mesh(geo,mat);
+
+coin.rotation.x=Math.PI/2;
+
+coin.position.set(
+(Math.random()-0.5)*40,
+0.3,
+(Math.random()-0.5)*40
+);
+
+scene.add(coin);
+
+coins.push(coin);
+
+}
+
+for(let i=0;i<10;i++) spawnCoin();
+
+/* CAMERA */
+
+camera.position.set(0,6,8);
+
+/* MOVIMENTO */
+
+let moveX=0;
+let moveZ=0;
+let velocityY=0;
+let jumping=false;
 
 function update(){
 
-bullets.forEach(b=>{
-b.y+=b.dy;
-});
+player.position.x+=moveX;
+player.position.z+=moveZ;
 
-enemies.forEach((e,ei)=>{
+/* gravidade */
 
-let dx=player.x-e.x;
-let dy=player.y-e.y;
-let dist=Math.sqrt(dx*dx+dy*dy);
+velocityY-=0.01;
+player.position.y+=velocityY;
 
-e.x+=dx/dist*e.speed;
-e.y+=dy/dist*e.speed;
-
-if(dist<player.size){
-player.health-=0.3;
+if(player.position.y<0.5){
+player.position.y=0.5;
+velocityY=0;
+jumping=false;
 }
 
-bullets.forEach((b,bi)=>{
+/* câmera segue */
 
-if(
-b.x<e.x+e.size &&
-b.x+b.size>e.x &&
-b.y<e.y+e.size &&
-b.y+b.size>e.y
-){
+camera.position.x=player.position.x;
+camera.position.z=player.position.z+8;
+camera.lookAt(player.position);
 
-enemies.splice(ei,1);
-bullets.splice(bi,1);
-score+=10;
+/* pegar moedas */
 
-}
+coins.forEach((c,i)=>{
 
-});
+let dist = player.position.distanceTo(c.position);
 
-});
+if(dist<1){
 
-if(player.health<=0){
+scene.remove(c);
+coins.splice(i,1);
 
-alert("💀 Game Over | Pontos: "+score);
-location.reload();
+score++;
+
+document.getElementById("ui").innerText="Moedas: "+score;
+
+spawnCoin();
 
 }
 
-camX = player.x - canvas.width/2;
-camY = player.y - canvas.height/2;
-
-document.getElementById("ui").innerText =
-"Vida: "+Math.floor(player.health)+" | Pontos: "+score;
-
-}
-
-function draw(){
-
-ctx.clearRect(0,0,canvas.width,canvas.height);
-
-ctx.fillStyle="#333";
-
-for(let x=0;x<worldWidth;x+=100){
-for(let y=0;y<worldHeight;y+=100){
-ctx.strokeRect(x-camX,y-camY,100,100);
-}
-}
-
-ctx.fillStyle="lime";
-ctx.fillRect(player.x-camX,player.y-camY,player.size,player.size);
-
-ctx.fillStyle="yellow";
-bullets.forEach(b=>{
-ctx.fillRect(b.x-camX,b.y-camY,b.size,b.size);
-});
-
-ctx.fillStyle="red";
-enemies.forEach(e=>{
-ctx.fillRect(e.x-camX,e.y-camY,e.size,e.size);
 });
 
 }
 
-function gameLoop(){
+/* LOOP */
+
+function animate(){
+
+requestAnimationFrame(animate);
 
 update();
-draw();
-requestAnimationFrame(gameLoop);
+
+renderer.render(scene,camera);
 
 }
 
-gameLoop();
+animate();
 
+/* BOTÃO PULAR */
+
+document.getElementById("jump").onclick=()=>{
+
+if(!jumping){
+
+velocityY=0.2;
+jumping=true;
+
+}
+
+};
 
 /* JOYSTICK */
 
@@ -228,17 +247,19 @@ joystick.addEventListener("touchstart",()=>dragging=true);
 
 document.addEventListener("touchend",()=>{
 dragging=false;
+moveX=0;
+moveZ=0;
 stick.style.left="30px";
 stick.style.top="30px";
 });
 
 document.addEventListener("touchmove",(e)=>{
 
-if(!dragging)return;
-
-let touch=e.touches[0];
+if(!dragging) return;
 
 let rect=joystick.getBoundingClientRect();
+
+let touch=e.touches[0];
 
 let x=touch.clientX-rect.left-60;
 let y=touch.clientY-rect.top-60;
@@ -247,15 +268,17 @@ let dist=Math.sqrt(x*x+y*y);
 let max=40;
 
 if(dist>max){
+
 x=x/dist*max;
 y=y/dist*max;
+
 }
 
 stick.style.left=(x+30)+"px";
 stick.style.top=(y+30)+"px";
 
-player.x+=x*0.1*player.speed;
-player.y+=y*0.1*player.speed;
+moveX=x*0.01;
+moveZ=y*0.01;
 
 });
 
