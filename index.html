@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>3D Shooter Mobile</title>
+<title>Zombie Shooter 3D</title>
 
 <style>
 
@@ -17,9 +17,9 @@ font-family:Arial;
 position:absolute;
 top:50%;
 left:50%;
-font-size:30px;
-color:white;
 transform:translate(-50%,-50%);
+color:white;
+font-size:28px;
 }
 
 #ui{
@@ -27,7 +27,7 @@ position:absolute;
 top:10px;
 left:10px;
 color:white;
-font-size:20px;
+font-size:18px;
 }
 
 #joystick{
@@ -54,15 +54,15 @@ top:40px;
 position:absolute;
 bottom:50px;
 right:50px;
-width:80px;
-height:80px;
+width:90px;
+height:90px;
 background:red;
 border-radius:50%;
-font-size:20px;
 color:white;
 display:flex;
 align-items:center;
 justify-content:center;
+font-size:20px;
 }
 
 </style>
@@ -102,29 +102,67 @@ renderer.setSize(window.innerWidth,window.innerHeight)
 
 document.body.appendChild(renderer.domElement)
 
-camera.position.y=1
+camera.position.y=1.6
 camera.position.z=5
 
 // luz
 let light = new THREE.DirectionalLight(0xffffff,1)
-light.position.set(5,10,5)
+light.position.set(10,20,10)
 scene.add(light)
 
+scene.add(new THREE.AmbientLight(0xaaaaaa))
+
 // chão
-let floorGeo = new THREE.PlaneGeometry(200,200)
-let floorMat = new THREE.MeshStandardMaterial({color:0x333333})
+let floorGeo = new THREE.PlaneGeometry(500,500)
+let floorMat = new THREE.MeshStandardMaterial({color:0x222222})
 let floor = new THREE.Mesh(floorGeo,floorMat)
 
 floor.rotation.x=-Math.PI/2
-
 scene.add(floor)
 
-// jogador
-let player = {
-x:0,
-z:5,
-speed:0.1
+// prédios
+function createBuilding(x,z){
+
+let geo = new THREE.BoxGeometry(
+5,
+Math.random()*20+10,
+5
+)
+
+let mat = new THREE.MeshStandardMaterial({color:0x555555})
+
+let b = new THREE.Mesh(geo,mat)
+
+b.position.x=x
+b.position.z=z
+b.position.y=geo.parameters.height/2
+
+scene.add(b)
+
 }
+
+for(let i=0;i<40;i++){
+
+createBuilding(
+(Math.random()*200)-100,
+(Math.random()*200)-100
+)
+
+}
+
+// arma simples
+let gunGeo = new THREE.BoxGeometry(0.3,0.2,1)
+let gunMat = new THREE.MeshStandardMaterial({color:0x333333})
+
+let gun = new THREE.Mesh(gunGeo,gunMat)
+
+gun.position.set(0.5,-0.4,-1)
+
+camera.add(gun)
+scene.add(camera)
+
+// jogador
+let player = {x:0,z:5,speed:0.15}
 
 // UI
 let score=0
@@ -133,23 +171,24 @@ let health=100
 // inimigos
 let enemies=[]
 
-function createEnemy(){
+function createZombie(){
 
-let geo = new THREE.BoxGeometry(1,1,1)
-let mat = new THREE.MeshStandardMaterial({color:0xff0000})
+let geo = new THREE.BoxGeometry(1,2,1)
+let mat = new THREE.MeshStandardMaterial({color:0x00aa00})
 
-let enemy = new THREE.Mesh(geo,mat)
+let zombie = new THREE.Mesh(geo,mat)
 
-enemy.position.x=(Math.random()*20)-10
-enemy.position.z=-50
+zombie.position.x=(Math.random()*80)-40
+zombie.position.z=(Math.random()*80)-40
+zombie.position.y=1
 
-scene.add(enemy)
+scene.add(zombie)
 
-enemies.push(enemy)
+enemies.push(zombie)
 
 }
 
-setInterval(createEnemy,2000)
+setInterval(createZombie,2000)
 
 // tiro
 function shoot(){
@@ -164,7 +203,6 @@ if(hits.length>0){
 
 let enemy=hits[0].object
 
-// explosão
 enemy.material.color.set(0xffff00)
 
 setTimeout(()=>{
@@ -174,7 +212,6 @@ scene.remove(enemy)
 enemies.splice(enemies.indexOf(enemy),1)
 
 score++
-
 document.getElementById("score").innerText=score
 
 }
@@ -228,18 +265,21 @@ player.z+=moveY*player.speed
 camera.position.x=player.x
 camera.position.z=player.z
 
-// mover inimigos
+// IA zumbi
 enemies.forEach(enemy=>{
 
-enemy.position.z+=0.2
+let dx = player.x - enemy.position.x
+let dz = player.z - enemy.position.z
 
-if(enemy.position.z>player.z){
+let dist = Math.sqrt(dx*dx+dz*dz)
 
-health-=10
+enemy.position.x += dx/dist*0.03
+enemy.position.z += dz/dist*0.03
 
-document.getElementById("health").innerText=health
+if(dist<1.5){
 
-scene.remove(enemy)
+health-=0.2
+document.getElementById("health").innerText=Math.floor(health)
 
 }
 
